@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -34,8 +35,15 @@ type SMLMessage struct {
 }
 
 func (z *Zaehlerstand) GetLive() float64 {
-
 	return ((z.Current.Bezug - z.Last.Bezug - z.Current.Abgabe + z.Last.Abgabe) / z.Current.Timestamp.Sub(z.Last.Timestamp).Seconds()) * 3600
+}
+
+func (z *Zaehlerstand) writeMySQL(db *sql.DB) error {
+	_, err := db.Exec("INSERT INTO zaehlerstand (bezug, abgabe) VALUES (?, ?)", z.Current.Bezug, z.Current.Abgabe)
+	if err != nil {
+		return fmt.Errorf("addAlbum: %v", err)
+	}
+	return nil
 }
 
 func (z *Zaehlerstand) updateZaehlerstand(bezug, abgabe float64) {
@@ -43,6 +51,20 @@ func (z *Zaehlerstand) updateZaehlerstand(bezug, abgabe float64) {
 	z.Current.Timestamp = time.Now()
 	z.Current.Bezug = bezug
 	z.Current.Abgabe = abgabe
+}
+
+func FetchZaehlerstandUsageToday(db *sql.DB, datum int) (Zaehlerstand, error) {
+	var z Zaehlerstand
+
+	row := db.QueryRow("SELECT * FROM zaehlerstand where datum = ?", datum)
+	if err := row.Scan(&z.Current.Bezug, &z.Current.Abgabe, &z.Current.Timestamp); err != nil {
+		if err == sql.ErrNoRows {
+			return z, fmt.Errorf("error %d", datum)
+		}
+		return z, fmt.Errorf("error %d", datum)
+	}
+	return z, nil
+
 }
 
 func detectSMLMessage(cache []byte) (SMLMessage, error) {
@@ -77,7 +99,7 @@ func (m *SMLMessage) parseKennzahl(k Kennzahl) (float64, error) {
 	return float64(binary.BigEndian.Uint64(valueByte)) / 10000, nil
 }
 
-func Tracker(wsChannel, dbChannel chan Zaehlerstand) {
+func Tracker(wsChannel, dbChannel chan Zaehlerstand, db *sql.DB) {
 
 	var tracker Zaehlerstand
 
@@ -121,6 +143,9 @@ func Tracker(wsChannel, dbChannel chan Zaehlerstand) {
 		// If message found, print and clear cache
 		if err != nil {
 
+			// Clear cache, we have message now
+			cache = []byte{}
+
 			// Parse Kennzahlen
 			abgabe, err := message.parseKennzahl(abgabe)
 			if err != nil {
@@ -133,8 +158,8 @@ func Tracker(wsChannel, dbChannel chan Zaehlerstand) {
 			// Update Zaehlerstand with new Kennzahlen
 			tracker.updateZaehlerstand(bezug, abgabe)
 
-			// Clear cache
-			cache = []byte{}
+			// Write to database
+			go tracker.writeMySQL(db)
 
 			// Notificate Sockets
 			select {
