@@ -3,7 +3,6 @@ package main
 
 import (
 	"database/sql"
-	"time"
 	"zaehler/tracker"
 	"zaehler/ws"
 )
@@ -20,7 +19,5 @@ func main() {
 	go tracker.NumGen(wsChannel, dbChannel)
 	//go tracker.Tracker(wsChannel, dbChannel, db)
 
-	go ws.RunWebserver(wsChannel)
-
-	time.Sleep(5000 * time.Second)
+	ws.RunWebserver(wsChannel)
 }
