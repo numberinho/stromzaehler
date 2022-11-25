@@ -26,7 +26,7 @@ func (t *tracker) Store() {
 
 	y, m, d := t.Zaehlerstand.Current.Timestamp.Date()
 	h := t.Zaehlerstand.Current.Timestamp.Hour()
-	directory := fmt.Sprintf("storage/%d/%d/%d", y, m, d)
+	directory := fmt.Sprintf("database/%d/%d/%d", y, m, d)
 
 	_, err := os.Stat(directory)
 	if os.IsNotExist(err) {
@@ -112,7 +112,7 @@ func FetchLastN(n int) (map[string]([]Zaehlerdetail), error) {
 			thisDate := today.AddDate(0, 0, -i)
 			y, m, d := thisDate.Date()
 
-			directory := fmt.Sprintf("storage/%d/%d/%d", y, m, d)
+			directory := fmt.Sprintf("database/%d/%d/%d", y, m, d)
 
 			day, err := FetchDay(directory)
 			if err != nil {
