@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 	"zaehler/tracker"
 
 	"github.com/gorilla/websocket"
@@ -109,6 +110,15 @@ func RunWebserver(wsChannel chan tracker.Zaehlerstand) {
 		pool.Register <- client
 		client.HealthCheck()
 
+	})
+
+	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		x, _ := tracker.FetchLastN(7)
+		for _, v := range x {
+			fmt.Println(len(v))
+		}
+		fmt.Fprintf(w, time.Now().Sub(start).String())
 	})
 
 	http.ListenAndServe(":8080", nil)

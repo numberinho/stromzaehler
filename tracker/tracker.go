@@ -1,10 +1,6 @@
 package tracker
 
 import (
-	"bytes"
-	"database/sql"
-	"encoding/binary"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -13,95 +9,13 @@ import (
 	"github.com/tarm/serial"
 )
 
-type Zaehlerdetail struct {
-	Bezug     float64
-	Abgabe    float64
-	Timestamp time.Time
+var Tracker tracker
+
+type tracker struct {
+	Zaehlerstand Zaehlerstand
 }
 
-type Zaehlerstand struct {
-	Current Zaehlerdetail
-	Last    Zaehlerdetail
-}
-
-type Kennzahl struct {
-	OBIS   []byte
-	Offset int
-	Length int
-}
-
-type SMLMessage struct {
-	Message []byte
-}
-
-func (z *Zaehlerstand) GetLive() float64 {
-	return ((z.Current.Bezug - z.Last.Bezug - z.Current.Abgabe + z.Last.Abgabe) / z.Current.Timestamp.Sub(z.Last.Timestamp).Seconds()) * 3600
-}
-
-func (z *Zaehlerstand) writeMySQL(db *sql.DB) error {
-	_, err := db.Exec("INSERT INTO zaehlerstand (bezug, abgabe) VALUES (?, ?)", z.Current.Bezug, z.Current.Abgabe)
-	if err != nil {
-		return fmt.Errorf("addAlbum: %v", err)
-	}
-	return nil
-}
-
-func (z *Zaehlerstand) updateZaehlerstand(bezug, abgabe float64) {
-	z.Last = z.Current
-	z.Current.Timestamp = time.Now()
-	z.Current.Bezug = bezug
-	z.Current.Abgabe = abgabe
-}
-
-func FetchZaehlerstandUsageToday(db *sql.DB, datum int) (Zaehlerstand, error) {
-	var z Zaehlerstand
-
-	row := db.QueryRow("SELECT * FROM zaehlerstand where datum = ?", datum)
-	if err := row.Scan(&z.Current.Bezug, &z.Current.Abgabe, &z.Current.Timestamp); err != nil {
-		if err == sql.ErrNoRows {
-			return z, fmt.Errorf("error %d", datum)
-		}
-		return z, fmt.Errorf("error %d", datum)
-	}
-	return z, nil
-
-}
-
-func detectSMLMessage(cache []byte) (SMLMessage, error) {
-
-	startSequence := []byte{0x01b, 0x01b, 0x01b, 0x01b, 0x01, 0x01, 0x01, 0x01}
-
-	startIndex := bytes.Index(cache, startSequence)
-	if startIndex == -1 {
-		return SMLMessage{}, nil
-	}
-
-	endIndex := bytes.Index(cache[startIndex+8:], startSequence)
-	if endIndex == -1 {
-		return SMLMessage{}, nil
-	}
-
-	return SMLMessage{cache[startIndex : endIndex+startIndex+8+4]}, nil
-}
-
-func (m *SMLMessage) parseKennzahl(k Kennzahl) (float64, error) {
-	idx := bytes.Index(m.Message, k.OBIS)
-	if idx == -1 {
-		return 0, errors.New("Error parsing Kennzahl")
-	}
-
-	valueByte := m.Message[idx+k.Offset : idx+k.Offset+k.Length]
-
-	for len(valueByte) < 8 { //uint64 = 8bytes
-		valueByte = append([]byte{0}, valueByte...)
-	}
-
-	return float64(binary.BigEndian.Uint64(valueByte)) / 10000, nil
-}
-
-func Tracker(wsChannel, dbChannel chan Zaehlerstand, db *sql.DB) {
-
-	var tracker Zaehlerstand
+func (t *tracker) ReadSerial(wsChannel chan Zaehlerstand) {
 
 	// Define Kennzahlen
 	bezug := Kennzahl{
@@ -156,48 +70,39 @@ func Tracker(wsChannel, dbChannel chan Zaehlerstand, db *sql.DB) {
 				log.Fatal(err)
 			}
 			// Update Zaehlerstand with new Kennzahlen
-			tracker.updateZaehlerstand(bezug, abgabe)
+			t.Zaehlerstand.updateZaehlerstand(bezug, abgabe)
 
-			// Write to database
-			go tracker.writeMySQL(db)
+			// Write to Disc
+			go t.Store()
 
 			// Notificate Sockets
-			select {
-			case wsChannel <- tracker:
-			default:
-			}
-
-			select {
-			case dbChannel <- tracker:
-			default:
-			}
+			t.NotificateWebsocket(wsChannel)
 		}
 	}
 }
 
-func NumGen(wsChannel, dbChannel chan Zaehlerstand) {
-	var tracker Zaehlerstand
+func (t *tracker) ReadSerialDev(wsChannel chan Zaehlerstand) {
 
 	for {
 		time.Sleep(2 * time.Second)
 
-		tracker.Last = tracker.Current
-		tracker.Current.Timestamp = time.Now()
-		tracker.Current.Abgabe = tracker.Current.Abgabe + rand.Float64()/2
-		tracker.Current.Bezug = tracker.Current.Bezug + rand.Float64()
+		t.Zaehlerstand.Last = t.Zaehlerstand.Current
+		t.Zaehlerstand.Current.Timestamp = time.Now()
+		t.Zaehlerstand.Current.Abgabe = t.Zaehlerstand.Current.Abgabe + rand.Float64()/2
+		t.Zaehlerstand.Current.Bezug = t.Zaehlerstand.Current.Bezug + rand.Float64()
+
+		go t.Store()
 
 		// send to ws
-		select {
-		case wsChannel <- tracker:
-			fmt.Println("send:", tracker.Current.Abgabe)
-		default:
-			fmt.Println("!send:", tracker.Current.Abgabe)
-		}
+		t.NotificateWebsocket(wsChannel)
+	}
+}
 
-		// send to db
-		select {
-		case dbChannel <- tracker:
-		default:
-		}
+func (t *tracker) NotificateWebsocket(wsChannel chan Zaehlerstand) {
+	select {
+	case wsChannel <- t.Zaehlerstand:
+		fmt.Println("send:", t.Zaehlerstand.Current.Abgabe)
+	default:
+		fmt.Println("!send:", t.Zaehlerstand.Current.Abgabe)
 	}
 }
