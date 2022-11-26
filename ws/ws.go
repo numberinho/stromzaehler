@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"zaehler/database"
 	"zaehler/tracker"
 
 	"github.com/gorilla/websocket"
@@ -92,7 +93,7 @@ func (pool *Pool) Start() {
 	}
 }
 
-func RunWebserver(wsChannel chan tracker.Zaehlerstand) {
+func RunWebserver(wsChannel chan tracker.Zaehlerstand, database *database.Database) {
 	pool := NewPool(wsChannel)
 	go pool.Start()
 
@@ -112,14 +113,20 @@ func RunWebserver(wsChannel chan tracker.Zaehlerstand) {
 
 	})
 
-	http.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		x, _ := tracker.FetchLastN(7)
-		for _, v := range x {
-			fmt.Println(len(v))
-		}
-		fmt.Fprintf(w, time.Now().Sub(start).String())
-	})
+	http.HandleFunc("/history", getLastX(database))
 
 	http.ListenAndServe(":8080", nil)
+}
+
+func getLastX(db *database.Database) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		x, _ := db.FetchLastN(6)
+		var fl []float64
+		for _, v := range x {
+			fl = append(fl, v[len(v)-1].Bezug-v[0].Bezug)
+		}
+		fmt.Println(fl)
+		fmt.Fprintf(w, time.Now().Sub(start).String())
+	}
 }

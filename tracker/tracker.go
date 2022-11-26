@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"time"
+	"zaehler/database"
 
 	"github.com/tarm/serial"
 )
@@ -15,7 +16,7 @@ type tracker struct {
 	Zaehlerstand Zaehlerstand
 }
 
-func (t *tracker) ReadSerial(wsChannel chan Zaehlerstand) {
+func (t *tracker) ReadSerial(wsChannel chan Zaehlerstand, db *database.Database) {
 
 	// Define Kennzahlen
 	bezug := Kennzahl{
@@ -73,7 +74,7 @@ func (t *tracker) ReadSerial(wsChannel chan Zaehlerstand) {
 			t.Zaehlerstand.updateZaehlerstand(bezug, abgabe)
 
 			// Write to Disc
-			go t.Store()
+			go db.Store(t.Zaehlerstand.Current.Abgabe, t.Zaehlerstand.Current.Bezug, t.Zaehlerstand.Current.Timestamp)
 
 			// Notificate Sockets
 			t.NotificateWebsocket(wsChannel)
@@ -81,7 +82,7 @@ func (t *tracker) ReadSerial(wsChannel chan Zaehlerstand) {
 	}
 }
 
-func (t *tracker) ReadSerialDev(wsChannel chan Zaehlerstand) {
+func (t *tracker) ReadSerialDev(wsChannel chan Zaehlerstand, db *database.Database) {
 
 	for {
 		time.Sleep(2 * time.Second)
@@ -91,7 +92,7 @@ func (t *tracker) ReadSerialDev(wsChannel chan Zaehlerstand) {
 		t.Zaehlerstand.Current.Abgabe = t.Zaehlerstand.Current.Abgabe + rand.Float64()/2
 		t.Zaehlerstand.Current.Bezug = t.Zaehlerstand.Current.Bezug + rand.Float64()
 
-		go t.Store()
+		go db.Store(t.Zaehlerstand.Current.Abgabe, t.Zaehlerstand.Current.Bezug, t.Zaehlerstand.Current.Timestamp)
 
 		// send to ws
 		t.NotificateWebsocket(wsChannel)
