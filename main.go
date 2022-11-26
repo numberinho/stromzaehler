@@ -2,13 +2,10 @@
 package main
 
 import (
-	"database/sql"
 	"zaehler/database"
 	"zaehler/tracker"
 	"zaehler/ws"
 )
-
-var db *sql.DB
 
 func main() {
 
