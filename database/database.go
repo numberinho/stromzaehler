@@ -67,7 +67,7 @@ func (db *Database) Store(a, b float64, t time.Time) {
 func (db *Database) fetchDay(dirname string) (*[]Datapoint, error) {
 	var day []Datapoint
 
-	// TODO: goroutine?
+	// TODO goroutine?
 	for i := 0; i < 24; i++ {
 		var hour []Datapoint
 
@@ -126,7 +126,7 @@ func (db *Database) FetchLastNDailyData(n int) ([]Datapoint, error) {
 	arr := make([]Datapoint, n)
 	for k, v := range lastNdays {
 		arr[k].Bezug = v[len(v)-1].Bezug - v[0].Bezug
-		arr[k].Abgabe = v[len(v)-1].Bezug - v[0].Bezug
+		arr[k].Abgabe = v[len(v)-1].Abgabe - v[0].Abgabe
 		arr[k].Timestamp = v[0].Timestamp
 	}
 	return arr, nil
