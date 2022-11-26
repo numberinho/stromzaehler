@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -121,12 +122,14 @@ func RunWebserver(wsChannel chan tracker.Zaehlerstand, database *database.Databa
 func getLastX(db *database.Database) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		x, _ := db.FetchLastN(6)
-		var fl []float64
-		for _, v := range x {
-			fl = append(fl, v[len(v)-1].Bezug-v[0].Bezug)
+		x, _ := db.FetchLastNDailyData(6)
+		log.Println(time.Now().Sub(start).String())
+
+		w.Header().Set("Content-Type", "application/json")
+		jData, err := json.Marshal(x)
+		if err != nil {
+			// handle error
 		}
-		fmt.Println(fl)
-		fmt.Fprintf(w, time.Now().Sub(start).String())
+		w.Write(jData)
 	}
 }
