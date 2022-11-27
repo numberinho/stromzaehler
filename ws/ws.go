@@ -122,9 +122,10 @@ func RunWebserver(wsChannel chan tracker.Zaehlerstand, database *database.Databa
 func getLastX(db *database.Database) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		x, _ := db.FetchLastNDailyData(6)
+		x, _ := db.FetchLastDays(20)
 		log.Println(time.Now().Sub(start).String())
 
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
 		jData, err := json.Marshal(x)
 		if err != nil {
