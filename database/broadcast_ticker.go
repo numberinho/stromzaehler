@@ -18,7 +18,7 @@ func (db *Database) BroadcastTicker() {
 		if err == nil {
 			db.BroadcastChannel <- jData
 		}
-		x, _ = db.FetchLastDaysNetto(7)
+		x, _ = db.FetchLastDaysNetto(8)
 		var output2 = struct {
 			Type  int `json:"Type"`
 			Daily []float64

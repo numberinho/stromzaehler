@@ -163,11 +163,11 @@ func (db *Database) FetchDailyNetto(y, m, d int) (float64, error) {
 }
 
 func (db *Database) FetchLastDaysNetto(n int) ([]float64, error) {
-	var dailyNettoSlice = make([]float64, n-1)
+	var dailyNettoSlice = make([]float64, n)
 
 	today := time.Now()
 	var wg sync.WaitGroup
-	for i := 1; i < n; i++ {
+	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -178,7 +178,7 @@ func (db *Database) FetchLastDaysNetto(n int) ([]float64, error) {
 			if err != nil {
 				return
 			}
-			dailyNettoSlice[i-1] = daily
+			dailyNettoSlice[i] = daily
 		}(i)
 	}
 	wg.Wait()
