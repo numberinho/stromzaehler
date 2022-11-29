@@ -76,7 +76,7 @@ func (t *tracker) ReadSerial(db *database.Database) {
 			t.Zaehlerstand.updateZaehlerstand(bezug, abgabe)
 
 			// Write to Disc
-			go db.Store(t.Zaehlerstand.Current.Abgabe, t.Zaehlerstand.Current.Bezug, t.Zaehlerstand.Current.Timestamp)
+			go db.Store(t.Zaehlerstand.Current.Abgabe, t.Zaehlerstand.Last.Abgabe, t.Zaehlerstand.Current.Bezug, t.Zaehlerstand.Last.Bezug, t.Zaehlerstand.Current.Timestamp, t.Zaehlerstand.Last.Timestamp)
 		}
 	}
 }
@@ -91,6 +91,6 @@ func (t *tracker) ReadSerialDev(db *database.Database) {
 		t.Zaehlerstand.Current.Abgabe = t.Zaehlerstand.Current.Abgabe + rand.Float64()/2
 		t.Zaehlerstand.Current.Bezug = t.Zaehlerstand.Current.Bezug + rand.Float64()
 
-		go db.Store(t.Zaehlerstand.Current.Abgabe, t.Zaehlerstand.Current.Bezug, t.Zaehlerstand.Current.Timestamp)
+		go db.Store(t.Zaehlerstand.Current.Abgabe, t.Zaehlerstand.Last.Abgabe, t.Zaehlerstand.Current.Bezug, t.Zaehlerstand.Last.Bezug, t.Zaehlerstand.Current.Timestamp, t.Zaehlerstand.Last.Timestamp)
 	}
 }

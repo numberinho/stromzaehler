@@ -21,10 +21,6 @@ type Kennzahl struct {
 	Length int
 }
 
-func (z *Zaehlerstand) GetLive() float64 {
-	return ((z.Current.Bezug - z.Last.Bezug - z.Current.Abgabe + z.Last.Abgabe) / z.Current.Timestamp.Sub(z.Last.Timestamp).Seconds()) * 3600
-}
-
 func (z *Zaehlerstand) updateZaehlerstand(bezug, abgabe float64) {
 	z.Last = z.Current
 	z.Current.Timestamp = time.Now()

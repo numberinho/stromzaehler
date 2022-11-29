@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (db *Database) Store(a, b float64, t time.Time) {
+func (db *Database) Store(a, at, b, bt float64, t, tt time.Time) {
 
 	y, m, d := t.Date()
 	h := t.Hour()
@@ -46,8 +46,9 @@ func (db *Database) Store(a, b float64, t time.Time) {
 		Type   int     `json:"Type"`
 		Abgabe float64 `json:"Abgabe"`
 		Bezug  float64 `json:"Bezug"`
+		Live   float64 `json:Live`
 	}{
-		1, a, b,
+		1, a, b, (b - bt - a + at) / t.Sub(tt).Seconds() * 3600,
 	}
 
 	byteArray, err := json.Marshal(output)
