@@ -1,7 +1,6 @@
 package tracker
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -31,13 +30,4 @@ func (z *Zaehlerstand) updateZaehlerstand(bezug, abgabe float64) {
 	z.Current.Timestamp = time.Now()
 	z.Current.Bezug = bezug
 	z.Current.Abgabe = abgabe
-}
-
-func (z *Zaehlerstand) NotificateWebsocket(wsChannel chan Zaehlerstand) {
-	select {
-	case wsChannel <- *z:
-		fmt.Println("send:", z.Current.Abgabe)
-	default:
-		fmt.Println("!send:", z.Current.Abgabe)
-	}
 }

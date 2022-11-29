@@ -9,10 +9,9 @@ import (
 
 func main() {
 
-	wsChannel := make(chan tracker.Zaehlerstand, 1)
 	db := database.InitDB()
+	tracker := tracker.InitTracker(db)
 
-	go tracker.Tracker.ReadSerialDev(wsChannel, db)
-
-	ws.RunWebserver(wsChannel, db)
+	go tracker.ReadSerialDev(db)
+	ws.RunWebserver(db)
 }

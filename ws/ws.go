@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 	"zaehler/database"
-	"zaehler/tracker"
 
 	"github.com/gorilla/websocket"
 )
@@ -19,24 +18,24 @@ type Client struct {
 }
 
 type Message struct {
+	Type   string `json:"Type"`
 	Live   string `json:"Live"`
 	Bezug  string `json:"Bezug"`
 	Abgabe string `json:"Abgabe"`
+	Value  string `json:"Value"`
 }
 
 type Pool struct {
-	Register     chan *Client
-	Unregister   chan *Client
-	Clients      map[*Client]bool
-	Zaehlerstand chan tracker.Zaehlerstand
+	Register   chan *Client
+	Unregister chan *Client
+	Clients    map[*Client]bool
 }
 
-func NewPool(wsChannel chan tracker.Zaehlerstand) *Pool {
+func NewPool() *Pool {
 	return &Pool{
-		Register:     make(chan *Client),
-		Unregister:   make(chan *Client),
-		Clients:      make(map[*Client]bool),
-		Zaehlerstand: wsChannel,
+		Register:   make(chan *Client),
+		Unregister: make(chan *Client),
+		Clients:    make(map[*Client]bool),
 	}
 }
 
@@ -61,7 +60,7 @@ func (client *Client) HealthCheck() {
 	}
 }
 
-func (pool *Pool) Start() {
+func (pool *Pool) Start(db *database.Database) {
 	for {
 		select {
 		//connect
@@ -69,23 +68,16 @@ func (pool *Pool) Start() {
 			pool.Clients[client] = true
 			fmt.Println("Size of Connection Pool: ", len(pool.Clients))
 			fmt.Println("Clearing Channel: ", len(pool.Clients))
-			break
 
 		//disconnect
 		case client := <-pool.Unregister:
 			delete(pool.Clients, client)
 			fmt.Println("Size of Connection Pool: ", len(pool.Clients))
-			break
 
 		//broadcast
-		case zaehlerstand := <-pool.Zaehlerstand:
-
+		case byteArray := <-db.BroadcastChannel:
 			for client := range pool.Clients {
-				if err := client.Conn.WriteJSON(Message{
-					Live:   fmt.Sprintf("%f", zaehlerstand.GetLive()),
-					Bezug:  fmt.Sprintf("%f", zaehlerstand.Current.Bezug),
-					Abgabe: fmt.Sprintf("%f", zaehlerstand.Current.Abgabe),
-				}); err != nil {
+				if err := client.Conn.WriteMessage(1, byteArray); err != nil {
 					fmt.Println(err)
 					return
 				}
@@ -94,9 +86,9 @@ func (pool *Pool) Start() {
 	}
 }
 
-func RunWebserver(wsChannel chan tracker.Zaehlerstand, database *database.Database) {
-	pool := NewPool(wsChannel)
-	go pool.Start()
+func RunWebserver(db *database.Database) {
+	pool := NewPool()
+	go pool.Start(db)
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -114,23 +106,34 @@ func RunWebserver(wsChannel chan tracker.Zaehlerstand, database *database.Databa
 
 	})
 
-	http.HandleFunc("/history", getLastX(database))
+	http.HandleFunc("/history/hourly", hourlyHistory(db))
+	http.HandleFunc("/history/daily", dailyHistory(db))
 
 	http.ListenAndServe(":8080", nil)
 }
 
-func getLastX(db *database.Database) func(w http.ResponseWriter, r *http.Request) {
+func dailyHistory(db *database.Database) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		x, _ := db.FetchLastDays(20)
-		log.Println(time.Now().Sub(start).String())
+		x, _ := db.FetchLastDaysNetto(7)
+		log.Println(time.Since(start).String())
 
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
-		jData, err := json.Marshal(x)
-		if err != nil {
-			// handle error
-		}
+		jData, _ := json.Marshal(x)
+		w.Write(jData)
+	}
+}
+
+func hourlyHistory(db *database.Database) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		x, _ := db.FetchLastHoursNetto(24)
+		log.Println(time.Since(start).String())
+
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		jData, _ := json.Marshal(x)
 		w.Write(jData)
 	}
 }

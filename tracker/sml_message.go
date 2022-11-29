@@ -30,7 +30,7 @@ func detectSMLMessage(cache []byte) (SMLMessage, error) {
 func (m *SMLMessage) parseKennzahl(k Kennzahl) (float64, error) {
 	idx := bytes.Index(m.Message, k.OBIS)
 	if idx == -1 {
-		return 0, errors.New("Error parsing Kennzahl")
+		return 0, errors.New("error parsing Kennzahl")
 	}
 
 	valueByte := m.Message[idx+k.Offset : idx+k.Offset+k.Length]

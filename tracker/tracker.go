@@ -1,7 +1,6 @@
 package tracker
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -10,13 +9,16 @@ import (
 	"github.com/tarm/serial"
 )
 
-var Tracker tracker
-
 type tracker struct {
 	Zaehlerstand Zaehlerstand
 }
 
-func (t *tracker) ReadSerial(wsChannel chan Zaehlerstand, db *database.Database) {
+func InitTracker(db *database.Database) tracker {
+	var tracker tracker
+	return tracker
+}
+
+func (t *tracker) ReadSerial(db *database.Database) {
 
 	// Define Kennzahlen
 	bezug := Kennzahl{
@@ -75,14 +77,11 @@ func (t *tracker) ReadSerial(wsChannel chan Zaehlerstand, db *database.Database)
 
 			// Write to Disc
 			go db.Store(t.Zaehlerstand.Current.Abgabe, t.Zaehlerstand.Current.Bezug, t.Zaehlerstand.Current.Timestamp)
-
-			// Notificate Sockets
-			t.NotificateWebsocket(wsChannel)
 		}
 	}
 }
 
-func (t *tracker) ReadSerialDev(wsChannel chan Zaehlerstand, db *database.Database) {
+func (t *tracker) ReadSerialDev(db *database.Database) {
 
 	for {
 		time.Sleep(2 * time.Second)
@@ -93,17 +92,5 @@ func (t *tracker) ReadSerialDev(wsChannel chan Zaehlerstand, db *database.Databa
 		t.Zaehlerstand.Current.Bezug = t.Zaehlerstand.Current.Bezug + rand.Float64()
 
 		go db.Store(t.Zaehlerstand.Current.Abgabe, t.Zaehlerstand.Current.Bezug, t.Zaehlerstand.Current.Timestamp)
-
-		// send to ws
-		t.NotificateWebsocket(wsChannel)
-	}
-}
-
-func (t *tracker) NotificateWebsocket(wsChannel chan Zaehlerstand) {
-	select {
-	case wsChannel <- t.Zaehlerstand:
-		fmt.Println("send:", t.Zaehlerstand.Current.Abgabe)
-	default:
-		fmt.Println("!send:", t.Zaehlerstand.Current.Abgabe)
 	}
 }
