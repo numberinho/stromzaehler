@@ -236,3 +236,50 @@ out2:
 
 	return endMonthly - startMonthly, nil
 }
+
+func (db *Database) FetchCompareWeek() (float64, float64, float64, float64, float64, float64, error) {
+
+	now := time.Now()
+	targetDate := now.AddDate(0, 0, -7)
+
+	// find last monday
+	for i := 0; i < 7; i++ {
+		startWeek := now.AddDate(0, 0, -i)
+		if startWeek.Weekday() == time.Monday {
+			y, m, d := now.Date()
+			yt, mt, dt := startWeek.Date()
+
+			thisWeekEnd, err := db.fetchHourly(y, int(m), d, now.Hour())
+			if err != nil {
+				return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, nil
+			}
+			thisWeekStart, err := db.fetchHourly(yt, int(mt), dt, 0)
+			if err != nil {
+				return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, nil
+			}
+
+			targetDateStart := targetDate.AddDate(0, 0, -i)
+			y7, m7, d7 := targetDate.Date()
+			y7t, m7t, d7t := targetDateStart.Date()
+
+			lastWeekEnd, err := db.fetchHourly(y7, int(m7), d7, now.Hour())
+			if err != nil {
+				return thisWeekEnd.Data[len(thisWeekEnd.Data)-1].Abgabe - thisWeekStart.Data[0].Abgabe, thisWeekEnd.Data[len(thisWeekEnd.Data)-1].Bezug - thisWeekStart.Data[0].Bezug, 0.0, 0.0, 0.0, 0.0, nil
+			}
+			lastWeekStart, err := db.fetchHourly(y7t, int(m7t), d7t, 0)
+			if err != nil {
+				return thisWeekEnd.Data[len(thisWeekEnd.Data)-1].Abgabe - thisWeekStart.Data[0].Abgabe, thisWeekEnd.Data[len(thisWeekEnd.Data)-1].Bezug - thisWeekStart.Data[0].Bezug, 0.0, 0.0, 0.0, 0.0, nil
+			}
+
+			return thisWeekEnd.Data[len(thisWeekEnd.Data)-1].Abgabe - thisWeekStart.Data[0].Abgabe,
+				thisWeekEnd.Data[len(thisWeekEnd.Data)-1].Bezug - thisWeekStart.Data[0].Bezug,
+				lastWeekEnd.Data[len(lastWeekEnd.Data)-1].Abgabe - lastWeekStart.Data[0].Abgabe,
+				lastWeekEnd.Data[len(lastWeekEnd.Data)-1].Bezug - lastWeekStart.Data[0].Bezug,
+				(thisWeekEnd.Data[len(thisWeekEnd.Data)-1].Abgabe - thisWeekStart.Data[0].Abgabe) / (lastWeekEnd.Data[len(lastWeekEnd.Data)-1].Abgabe - lastWeekEnd.Data[0].Abgabe),
+				(thisWeekEnd.Data[len(thisWeekEnd.Data)-1].Bezug - thisWeekStart.Data[0].Bezug) / (lastWeekEnd.Data[len(lastWeekEnd.Data)-1].Bezug - lastWeekStart.Data[0].Bezug),
+				nil
+		}
+	}
+
+	return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, nil
+}

@@ -10,8 +10,7 @@ import (
 func main() {
 
 	db := database.InitDB()
-	tracker := tracker.InitTracker(db)
+	tracker.InitTracker(db)
 
-	go tracker.ReadSerialDev(db)
 	ws.RunWebserver(db)
 }

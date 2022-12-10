@@ -46,7 +46,7 @@ func (db *Database) Store(a, at, b, bt float64, t, tt time.Time) {
 		Type   int     `json:"Type"`
 		Abgabe float64 `json:"Abgabe"`
 		Bezug  float64 `json:"Bezug"`
-		Live   float64 `json:Live`
+		Live   float64 `json:"Live"`
 	}{
 		1, a, b, (b - bt - a + at) / t.Sub(tt).Seconds() * 3600,
 	}

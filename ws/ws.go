@@ -115,7 +115,7 @@ func RunWebserver(db *database.Database) {
 func dailyHistory(db *database.Database) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		x, _ := db.FetchLastDaysNetto(7)
+		x, _ := db.FetchLastHoursNetto(4)
 		log.Println(time.Since(start).String())
 
 		w.Header().Set("Access-Control-Allow-Origin", "*")

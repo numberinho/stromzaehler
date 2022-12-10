@@ -15,6 +15,8 @@ type tracker struct {
 
 func InitTracker(db *database.Database) tracker {
 	var tracker tracker
+	go tracker.readSerialDev(db)
+	//go tracker.ReadSerial(db)
 	return tracker
 }
 
@@ -81,7 +83,7 @@ func (t *tracker) ReadSerial(db *database.Database) {
 	}
 }
 
-func (t *tracker) ReadSerialDev(db *database.Database) {
+func (t *tracker) readSerialDev(db *database.Database) {
 
 	for {
 		time.Sleep(2 * time.Second)
