@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (db *Database) Store(a, at, b, bt float64, t, tt time.Time) {
+func (db *Database) Store(a, b, l float64, t time.Time) {
 
 	y, m, d := t.Date()
 	h := t.Hour()
@@ -32,7 +32,7 @@ func (db *Database) Store(a, at, b, bt float64, t, tt time.Time) {
 	decoder := gob.NewDecoder(file)
 	decoder.Decode(&read)
 
-	read = append(read, Datapoint{a, b, t})
+	read = append(read, Datapoint{b, a, t})
 
 	file.Seek(0, 0)
 	encoder := gob.NewEncoder(file)
@@ -48,7 +48,7 @@ func (db *Database) Store(a, at, b, bt float64, t, tt time.Time) {
 		Bezug  float64 `json:"Bezug"`
 		Live   float64 `json:"Live"`
 	}{
-		1, a, b, (b - bt - a + at) / t.Sub(tt).Seconds() * 3600,
+		1, a, b, l,
 	}
 
 	byteArray, err := json.Marshal(output)
@@ -58,7 +58,7 @@ func (db *Database) Store(a, at, b, bt float64, t, tt time.Time) {
 
 	select {
 	case db.BroadcastChannel <- byteArray:
-		fmt.Print("_")
+		fmt.Print("")
 	default:
 		fmt.Print("!")
 	}

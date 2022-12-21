@@ -4,15 +4,11 @@ import (
 	"time"
 )
 
-type Zaehlerdetail struct {
+type Zaehlerstand struct {
 	Bezug     float64   `json:"Bezug"`
 	Abgabe    float64   `json:"Abgabe"`
+	Live      float64   `json:"Live"`
 	Timestamp time.Time `json:"Timestamp"`
-}
-
-type Zaehlerstand struct {
-	Current Zaehlerdetail
-	Last    Zaehlerdetail
 }
 
 type Kennzahl struct {
@@ -21,9 +17,11 @@ type Kennzahl struct {
 	Length int
 }
 
-func (z *Zaehlerstand) updateZaehlerstand(bezug, abgabe float64) {
-	z.Last = z.Current
-	z.Current.Timestamp = time.Now()
-	z.Current.Bezug = bezug
-	z.Current.Abgabe = abgabe
+/*
+func (z *Zaehlerstand) updateZaehlerstand(bezug, abgabe, live float64) {
+	z.Timestamp = time.Now()
+	z.Bezug = bezug
+	z.Abgabe = abgabe
+	z.Live = live
 }
+*/

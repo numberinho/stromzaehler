@@ -144,6 +144,7 @@ func (db *Database) FetchDailyNetto(y, m, d int) (float64, error) {
 			continue
 		}
 		startDaily = hourly.Data[0].Bezug
+
 		break
 	}
 
